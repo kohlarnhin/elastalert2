@@ -1,12 +1,13 @@
 import os
 import ssl
+from email.header import Header
 
 from elastalert.alerts import Alerter
 from elastalert.util import elastalert_logger, lookup_es_key, EAException
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.image import MIMEImage
-from email.utils import formatdate
+from email.utils import formatdate, formataddr
 from socket import error
 from smtplib import SMTP
 from smtplib import SMTP_SSL
@@ -26,6 +27,7 @@ class EmailAlerter(Alerter):
         self.smtp_host = self.rule.get('smtp_host', 'localhost')
         self.smtp_ssl = self.rule.get('smtp_ssl', False)
         self.from_addr = self.rule.get('from_addr', 'ElastAlert')
+        self.from_name = self.rule.get('from_name', self.from_addr)
         self.smtp_port = self.rule.get('smtp_port')
         if self.rule.get('smtp_auth_file'):
             self.get_account(self.rule['smtp_auth_file'])
@@ -82,7 +84,7 @@ class EmailAlerter(Alerter):
             email_msg = MIMEText(body, _charset='UTF-8')
         email_msg['Subject'] = self.create_title(matches)
         email_msg['To'] = ', '.join(to_addr)
-        email_msg['From'] = self.from_addr
+        email_msg['From'] = formataddr((str(Header(self.from_name, 'utf-8')), self.from_addr))
         email_msg['Reply-To'] = self.rule.get('email_reply_to', email_msg['To'])
         email_msg['Date'] = formatdate()
         if self.rule.get('cc'):
